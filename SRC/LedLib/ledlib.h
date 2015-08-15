@@ -63,9 +63,9 @@ namespace LEDGLOBAL
    public:
        Led();
 
-       void setLedColor(const LedColor color);
-       void setLedState(const LedState state);
-       void setLedRate(const LedRate rate);
+       bool setLedColor(const LedColor color);
+       bool setLedState(const LedState state);
+       bool setLedRate(const LedRate rate);
 
        LedColor getLedColor() const;
        LedState getLedState() const;
@@ -117,10 +117,11 @@ namespace LEDGLOBAL
 
        LedCommandType getType(const QString command) const;
        LedState getState(const QString command) const;
+       LedState strToState(const QString stateStr) const;
+       QString stateToStr(const LedState state) const;
 
      private:
-       StateCommandHandler();
-        LedState strToState(const QString stateStr) const;
+       StateCommandHandler();      
     };
 
     //////////////////////////////////////
@@ -141,10 +142,11 @@ namespace LEDGLOBAL
 
        LedCommandType getType(const QString command) const;
        LedColor getColor(const QString command) const;
+       LedColor strToColor(const QString colorStr) const;
+       QString colorToStr (const LedColor color) const;
 
     private:
-       explicit ColorCommandHandler();
-       LedColor strToColor(const QString colorStr) const;
+       explicit ColorCommandHandler();       
     };
 
     //////////////////////////////////////
@@ -187,6 +189,7 @@ namespace LEDGLOBAL
         static RateCommandHandler rateCommandHandler;
 
         static CommandInfo getCommandInfo(QString command);
+        static QStringList getCommandList(QString commandLine);
     };
 
 

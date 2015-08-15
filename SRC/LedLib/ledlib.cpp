@@ -7,24 +7,42 @@ using namespace LEDGLOBAL;
 ///              Led               ///
 //////////////////////////////////////
 
-Led::Led() : mColor(LED_COLOR_INVALID), mState(LED_STATE_INVALID), mRate(LED_RATE_INVALID)
+Led::Led() : mColor(LED_COLOR_RED), mState(LED_STATE_OFF), mRate(0)
 {
 
 }
 
-void Led::setLedColor(const LedColor color)
+bool Led::setLedColor(const LedColor color)
 {
-    mColor = color;
+    if(color >= 0 && color < LED_COLOR_INVALID)
+    {
+        mColor = color;
+        return true;
+    }
+
+    return false;
 }
 
-void Led::setLedState(const LedState state)
+bool Led::setLedState(const LedState state)
 {
-   mState = state;
+    if(state >= 0 && state < LED_STATE_INVALID)
+    {
+        mState = state;
+        return true;
+    }
+
+    return false;
 }
 
-void Led::setLedRate(const LedRate rate)
+bool Led::setLedRate(const LedRate rate)
 {
-    mRate = rate;
+    if (rate <= LED_RATE_MAX)
+    {
+        mRate = rate;
+        return true;
+    }
+
+    return false;
 }
 
 LedColor Led::getLedColor() const
@@ -184,6 +202,12 @@ LedState StateCommandHandler::strToState(const QString stateStr) const
     return state;
 }
 
+QString StateCommandHandler::stateToStr(const LedState state) const
+{
+    auto stateStr = mStates.find(state);
+    return stateStr != mStates.end()? *stateStr : QString();
+}
+
 //////////////////////////////////////
 ///        ColorCommandHandler     ///
 //////////////////////////////////////
@@ -291,6 +315,12 @@ LedColor ColorCommandHandler::strToColor(const QString colorStr) const
     }
 
     return color;
+}
+
+QString ColorCommandHandler::colorToStr(const LedColor color) const
+{
+    auto colorStr = mColors.find(color);
+    return colorStr != mColors.end()? *colorStr : QString();
 }
 
 //////////////////////////////////////
@@ -438,4 +468,9 @@ CommandInfo LED_COMMAND_HANDLERS::getCommandInfo(QString command)
     }
 
     return info;
+}
+
+QStringList LED_COMMAND_HANDLERS::getCommandList(QString commandLine)
+{
+    return commandLine.split("\n", QString::SkipEmptyParts);
 }
