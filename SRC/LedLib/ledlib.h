@@ -50,6 +50,28 @@ namespace LEDGLOBAL
    static const int LED_RATE_MAX = 5;
    static const int LED_RATE_INVALID = LED_RATE_MAX + 1;
 
+   //////////////////////////////////////
+   ///              Led               ///
+   //////////////////////////////////////
+
+   class EXPORT Led
+   {
+       LedColor mColor;
+       LedState mState;
+       LedRate mRate;
+
+   public:
+       Led();
+
+       void setLedColor(const LedColor color);
+       void setLedState(const LedState state);
+       void setLedRate(const LedRate rate);
+
+       LedColor getLedColor() const;
+       LedState getLedState() const;
+       LedRate getLedRate() const;
+   };
+
     //////////////////////////////////////
     ///     AbstractCommandHandler     ///
     //////////////////////////////////////
@@ -96,7 +118,7 @@ namespace LEDGLOBAL
        LedCommandType getType(const QString command) const;
        LedState getState(const QString command) const;
 
-     //private:
+     private:
        StateCommandHandler();
         LedState strToState(const QString stateStr) const;
     };
@@ -149,6 +171,14 @@ namespace LEDGLOBAL
     ///      LED_COMMAND_HANDLERS      ///
     //////////////////////////////////////
 
+    struct CommandInfo
+    {
+        LedCommandType type;
+        LedParameter param;
+
+        CommandInfo();
+    };
+
     class EXPORT LED_COMMAND_HANDLERS
     {
     public:
@@ -156,7 +186,7 @@ namespace LEDGLOBAL
         static ColorCommandHandler colorCommandHandler;
         static RateCommandHandler rateCommandHandler;
 
-        static LedCommandType getCommandType(QString command);
+        static CommandInfo getCommandInfo(QString command);
     };
 
 

@@ -2,6 +2,46 @@
 
 using namespace LEDGLOBAL;
 
+
+//////////////////////////////////////
+///              Led               ///
+//////////////////////////////////////
+
+Led::Led() : mColor(LED_COLOR_INVALID), mState(LED_STATE_INVALID), mRate(LED_RATE_INVALID)
+{
+
+}
+
+void Led::setLedColor(const LedColor color)
+{
+    mColor = color;
+}
+
+void Led::setLedState(const LedState state)
+{
+   mState = state;
+}
+
+void Led::setLedRate(const LedRate rate)
+{
+    mRate = rate;
+}
+
+LedColor Led::getLedColor() const
+{
+    return mColor;
+}
+
+LedState Led::getLedState() const
+{
+    return mState;
+}
+
+LedRate Led::getLedRate() const
+{
+    return mRate;
+}
+
 //////////////////////////////////////
 ///     AbstractCommandHandler     ///
 //////////////////////////////////////
@@ -358,32 +398,44 @@ LedRate RateCommandHandler::getRate(const QString command) const
 ///          COMMAND_HANDLERS      ///
 //////////////////////////////////////
 
+
+CommandInfo::CommandInfo() : type(LED_COMMAND_INVALID), param(LED_PARAM_INVALID)
+{
+
+}
+
 StateCommandHandler LED_COMMAND_HANDLERS::stateCommandHandler;
 ColorCommandHandler LED_COMMAND_HANDLERS::colorCommandHandler;
 RateCommandHandler LED_COMMAND_HANDLERS::rateCommandHandler;
 
-LedCommandType LED_COMMAND_HANDLERS::getCommandType(QString command)
+CommandInfo LED_COMMAND_HANDLERS::getCommandInfo(QString command)
 {
+    CommandInfo info;
     LedCommandType type = LED_COMMAND_INVALID;
 
     type = stateCommandHandler.getType(command);
-
-    if(type == LED_COMMAND_INVALID){
-        type = colorCommandHandler.getType(command);
+    if(type != LED_COMMAND_INVALID)
+    {
+        info.type = type;
+        info.param = type != LED_COMMAND_RESPONSE_FAILED? LED_PARAM_STATE : LED_PARAM_INVALID;
+        return info;
     }
 
-    if(type == LED_COMMAND_INVALID){
-        type = rateCommandHandler.getType(command);
+    type = colorCommandHandler.getType(command);
+    if(type != LED_COMMAND_INVALID)
+    {
+        info.type = type;
+        info.param = type != LED_COMMAND_RESPONSE_FAILED? LED_PARAM_COLOR : LED_PARAM_INVALID;
+        return info;
     }
 
-    return type;
+    type = rateCommandHandler.getType(command);
+    if(type != LED_COMMAND_INVALID)
+    {
+        info.type = type;
+        info.param = type != LED_COMMAND_RESPONSE_FAILED? LED_PARAM_RATE : LED_PARAM_INVALID;
+        return info;
+    }
+
+    return info;
 }
-
-
-
-
-
-
-
-
-
