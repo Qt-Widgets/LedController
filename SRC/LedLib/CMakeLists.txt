@@ -1,4 +1,4 @@
 add_project (LedLib
-             DLL
+             SHARED_LIB
              ledlib.cpp
              ledlib.h)

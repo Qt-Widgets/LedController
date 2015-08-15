@@ -2,203 +2,166 @@
 #define LEDLIB_H
 
 #ifdef _WIN32
-   #define EXPORT __declspec( dllexport )
+#define EXPORT __declspec( dllexport )
 #else
-   #define EXPORT
+#define EXPORT
 #endif
 
 #include <QHash>
 #include <QString>
 #include <QStringList>
-#include <QDebug>
 
-#include <memory>
-
-class CommandPool;
-
-//////////////////////////////////////
-///     AbstractCommandHandler     ///
-//////////////////////////////////////
-
-class EXPORT AbstractCommandHandler
+namespace LEDGLOBAL
 {
-    friend class CommandPool;
-
-public:
-    enum CommandType{
-        COMMAND_TYPE_REQUEST,
-        COMMAND_TYPE_RESPONSE,
-        COMMAND_TYPE_INVALID
-    };
-
-    enum ResponseResult{
-        RESPONSE_OK,
-        RESPONSE_FAILED,
-        RESPONSE_INVALID
-    };
-
-    virtual ~AbstractCommandHandler(){}
-    virtual bool isValid(const QString commandStr, const CommandType type) const = 0;
-
-protected:
-    QStringList mCommandTexts;
-    QStringList mResponseResultTexts;
-
-    AbstractCommandHandler();  
-};
-
-//////////////////////////////////////
-///        StateCommandHandler     ///
-//////////////////////////////////////
-
-class EXPORT StateCommandHandler : public AbstractCommandHandler
-{
-   friend class CommandPool;
-
-public:
-    enum State {
-        STATE_ON,
-        STATE_OFF,
-        STATE_INVALID
-    };
-
-    QString createRequest(const State state) const;
-    QString createResponse(const ResponseResult result, const State state = STATE_INVALID) const;
-    State getStateFromCommand(const QString commandStr, const CommandType type) const;
-
-private:
-    enum RequestStructure {
-        REQUEST_COMMAND,
-        REQUEST_STATE,
-        REQUEST_SIZE
-    };
-
-    enum ResponseStructure{
-        RESPONSE_RESULT,
-        RESPONSE_STATE,
-        RESPONSE_MIN_SIZE = 1,
-        RESPONSE_MAX_SIZE = 2
-    };
-
-    QStringList mStateTexts;
-
-    StateCommandHandler();
-    bool isValid(const QString commandStr, const CommandType type) const;
-    State strToState(const QString stateStr) const ;
-};
-
-//////////////////////////////////////
-///        ColorCommandHandler     ///
-//////////////////////////////////////
-
-class EXPORT ColorCommandHandler : public AbstractCommandHandler
-{
-   friend class CommandPool;
-
-public:
-    enum Color{
-        COLOR_RED,
-        COLOR_GREEN,
-        COLOR_BLUE,
-        COLOR_INVALID
-    };
-
-    QString createRequest(const Color color) const;
-    QString createResponse(const ResponseResult result, const Color color = COLOR_INVALID) const;
-    Color getColorFromCommand(const QString commandStr, const CommandType type) const;
-
-private:
-    enum RequestStructure{
-        REQUEST_COMMAND,
-        REQUEST_COLOR,
-        REQUEST_SIZE
-    };
-
-    enum ResponseStructure{
-        RESPONSE_RESULT,
-        RESPONSE_COLOR,
-        RESPONSE_MIN_SIZE = 1,
-        RESPONSE_MAX_SIZE = 2
-    };
-
-    QStringList mColorTexts;
-
-    ColorCommandHandler();
-    bool isValid(const QString commandStr, const CommandType type) const ;
-    Color strToColor(const QString colorStr) const ;
-};
-
-//////////////////////////////////////
-///        RateCommandHandler      ///
-//////////////////////////////////////
-
-class EXPORT RateCommandHandler : public AbstractCommandHandler
-{
-    friend class CommandPool;
-
-public:
-    QString createRequest(const quint8 rate) const;
-    QString createResponse(const ResponseResult result, const quint8 rate = 0) const;
-    quint8 getRateFromCommand(const QString commandStr, const CommandType type, bool& ok) const;
-
-private:
-    enum RequestStructure{
-        REQUEST_COMMAND,
-        REQUEST_RATE,
-        REQUEST_SIZE
-    };
-
-    enum ResponseStructure{
-        RESPONSE_RESULT,
-        RESPONSE_RATE,
-        RESPONSE_MIN_SIZE = 1,
-        RESPONSE_MAX_SIZE = 2
-    };
-
-    static const int mMaxRate = 5;
-
-    RateCommandHandler();
-    bool isValid(const QString commandStr, const CommandType type) const;
-};
-
-//////////////////////////////////////
-///          CommandPool           ///
-//////////////////////////////////////
-
-class EXPORT CommandPool
-{
-public:
-    enum LedCommandType
+    enum LedParameter
     {
-        LED_COMMAND_STATE,
-        LED_COMMAND_COLOR,
-        LED_COMMAND_RATE,
-
-        LED_COMMAND_INVALID
+        LED_PARAM_STATE,
+        LED_PARAM_COLOR,
+        LED_PARAM_RATE,
+        LED_PARAM_INVALID
     };
 
-    typedef QPair<CommandPool::LedCommandType, AbstractCommandHandler::CommandType> CommandInfo;
+    enum LedCommandType{
+      LED_COMMAND_STATE_SET,
+      LED_COMMAND_STATE_GET,
+      LED_COMMAND_COLOR_SET,
+      LED_COMMAND_COLOR_GET,
+      LED_COMMAND_RATE_SET,
+      LED_COMMAND_RATE_GET,
+      LED_COMMAND_RESPONSE_OK,
+      LED_COMMAND_RESPONSE_FAILED,
+      LED_COMMAND_INVALID
+    };
 
-   static AbstractCommandHandler* getCommandHandler (LedCommandType type);
-   static CommandInfo getCommandInfo (QString commandStr);
+    enum LedState{
+        LED_STATE_ON,
+        LED_STATE_OFF,
+        LED_STATE_INVALID
+    };
 
-private:
-   typedef std::shared_ptr<AbstractCommandHandler> AbstractCommandHandlerPtr;
-   static QHash<LedCommandType, AbstractCommandHandlerPtr> mCommandStorage;
-};
+    enum LedColor{
+        LED_COLOR_RED,
+        LED_COLOR_GREEN,
+        LED_COLOR_BLUE,
+        LED_COLOR_INVALID
+    };
 
-//////////////////////////////////////
-///             Led                ///
-//////////////////////////////////////
+   typedef quint8 LedRate;
+   static const int LED_RATE_MAX = 5;
+   static const int LED_RATE_INVALID = LED_RATE_MAX + 1;
 
-class EXPORT Led
-{
-public:
-    StateCommandHandler::State state;
-    ColorCommandHandler::Color color;
-    quint8 rate;
+    //////////////////////////////////////
+    ///     AbstractCommandHandler     ///
+    //////////////////////////////////////
 
-    void test();
-};
+    class EXPORT AbstractCommandHandler
+    {
+        friend class LED_COMMAND_HANDLERS;
+
+    protected:
+       QHash<LedCommandType, QString> mCommands;
+       QHash<LedCommandType, QString> mResponses;
+
+       enum LedCommandStructure{
+           LED_STRUCT_POS_COMMAND,
+           LED_STRUCT_POS_ARGUMENT,
+
+           LED_STRUCT_SIZE_NO_ARGUMENT = 1,
+           LED_STRUCT_SIZE_WITH_ARGUMENT = 2};
+
+    public:
+       virtual LedCommandType getType(const QString command) const;
+
+    protected:
+        explicit AbstractCommandHandler();
+    };
+
+
+    //////////////////////////////////////
+    ///        StateCommandHandler     ///
+    //////////////////////////////////////
+
+    class EXPORT StateCommandHandler : public AbstractCommandHandler
+    {
+       friend class LED_COMMAND_HANDLERS;
+
+    private:
+       QHash<LedState, QString> mStates;
+
+    public:
+       QString createSetStateCommand(const LedState state) const;
+       QString createGetStateCommand() const;
+       QString createResponse(LedState state = LED_STATE_INVALID);
+
+       LedCommandType getType(const QString command) const;
+       LedState getState(const QString command) const;
+
+     //private:
+       StateCommandHandler();
+        LedState strToState(const QString stateStr) const;
+    };
+
+    //////////////////////////////////////
+    ///        ColorCommandHandler     ///
+    //////////////////////////////////////
+
+    class EXPORT ColorCommandHandler : public AbstractCommandHandler
+    {
+       friend class LED_COMMAND_HANDLERS;
+
+    private:
+       QHash<LedColor, QString> mColors;
+
+    public:
+       QString createSetColorCommand(const LedColor color) const;
+       QString createGetColorCommand() const;
+       QString createResponse(LedColor color = LED_COLOR_INVALID);
+
+       LedCommandType getType(const QString command) const;
+       LedColor getColor(const QString command) const;
+
+    private:
+       explicit ColorCommandHandler();
+       LedColor strToColor(const QString colorStr) const;
+    };
+
+    //////////////////////////////////////
+    ///         RateCommandHandler     ///
+    //////////////////////////////////////
+
+    class EXPORT RateCommandHandler : public AbstractCommandHandler
+    {
+        friend class LED_COMMAND_HANDLERS;
+
+    public:
+       QString createSetRateCommand(const LedRate rate) const;
+       QString createGetRateCommand() const;
+       QString createResponse(LedRate rate = LED_RATE_MAX + 1);
+
+       LedCommandType getType(const QString command) const;
+       LedRate getRate(const QString command) const;
+
+    private:
+        explicit RateCommandHandler();
+    };
+
+    //////////////////////////////////////
+    ///      LED_COMMAND_HANDLERS      ///
+    //////////////////////////////////////
+
+    class EXPORT LED_COMMAND_HANDLERS
+    {
+    public:
+        static StateCommandHandler stateCommandHandler;
+        static ColorCommandHandler colorCommandHandler;
+        static RateCommandHandler rateCommandHandler;
+
+        static LedCommandType getCommandType(QString command);
+    };
+
+
+}
+
+
 
 #endif // LEDLIB_H

@@ -1,13 +1,39 @@
 #include "ledlib.h"
 
+using namespace LEDGLOBAL;
+
 //////////////////////////////////////
 ///     AbstractCommandHandler     ///
 //////////////////////////////////////
 
 AbstractCommandHandler::AbstractCommandHandler()
 {
-    mResponseResultTexts.append("OK");
-    mResponseResultTexts.append("FAILED");
+    mResponses.insert(LED_COMMAND_RESPONSE_OK, "OK");
+    mResponses.insert(LED_COMMAND_RESPONSE_FAILED, "FAILED");
+}
+
+LedCommandType AbstractCommandHandler::getType(const QString command) const
+{
+    LedCommandType type = LED_COMMAND_INVALID;
+
+    if(command.isEmpty()){
+        return type;
+    }
+
+    QStringList parts = command.split(" ", QString::SkipEmptyParts);
+
+    if(parts[LED_STRUCT_POS_COMMAND] == mResponses[LED_COMMAND_RESPONSE_OK] && //if OK is matched
+       parts.size() == LED_STRUCT_SIZE_WITH_ARGUMENT) //validating size
+    {
+        type = LED_COMMAND_RESPONSE_OK;
+    }
+    else if(parts[LED_STRUCT_POS_COMMAND] == mResponses[LED_COMMAND_RESPONSE_FAILED] && //if FAILED is matched
+            parts.size() == LED_STRUCT_SIZE_NO_ARGUMENT) //validating size
+    {
+        type = LED_COMMAND_RESPONSE_FAILED;
+    }
+
+    return type;
 }
 
 //////////////////////////////////////
@@ -16,92 +42,103 @@ AbstractCommandHandler::AbstractCommandHandler()
 
 StateCommandHandler::StateCommandHandler()
 {
-    for(int commandText = 0; commandText < COMMAND_TYPE_INVALID; ++ commandText){
-        mCommandTexts.append("");
+    mStates.insert(LED_STATE_ON, "on");
+    mStates.insert(LED_STATE_OFF, "off");
+
+    mCommands.insert(LED_COMMAND_STATE_SET, "set-led-state");
+    mCommands.insert(LED_COMMAND_STATE_GET, "get-led-state");
+}
+
+QString StateCommandHandler::createSetStateCommand(const LedState state) const
+{
+    QString command;
+
+    if(mStates.contains(state)){
+        command = QString("%1 %2\n")
+                .arg(mCommands[LED_COMMAND_STATE_SET])
+                .arg(mStates[state]);
     }
 
-    mCommandTexts[COMMAND_TYPE_REQUEST] = "set-led-state";
-    mCommandTexts[COMMAND_TYPE_RESPONSE] = "get-led-state";
+    return command;
+}
 
-    for(int state = 0; state < STATE_INVALID; ++ state){
-        mStateTexts.append("");
+QString StateCommandHandler::createGetStateCommand() const
+{
+    return QString("%1\n").arg(mCommands[LED_COMMAND_STATE_GET]);
+}
+
+QString StateCommandHandler::createResponse(LedState state)
+{
+    QString command;
+
+    if(!mStates.contains(state)){
+        state = LED_STATE_INVALID;
     }
 
-    mStateTexts[STATE_ON] = "on";
-    mStateTexts[STATE_OFF] = "off";
+    command = (state == LED_STATE_INVALID)?
+                QString("%1\n").arg(mResponses[LED_COMMAND_RESPONSE_FAILED]) :
+                QString("%1 %2\n").arg(mResponses[LED_COMMAND_RESPONSE_OK]).arg(mStates[state]);
+
+    return command;
 }
 
-QString StateCommandHandler::createRequest(const State state) const
+LedCommandType StateCommandHandler::getType(const QString command) const
 {
-    return QString("%1 %2\n")
-            .arg(mCommandTexts[REQUEST_COMMAND])
-            .arg(mStateTexts[state]);
-}
+    LedCommandType type = AbstractCommandHandler::getType(command);
+    if(command.isEmpty()){
+        return type;
+    }
 
-QString StateCommandHandler::createResponse(const ResponseResult result, const State state) const
-{
-    QString response = result == RESPONSE_OK?
-                       QString("%1 %2\n").arg(mResponseResultTexts[result]).arg(mStateTexts[state]) :
-                       QString("%1\n").arg(mResponseResultTexts[result]);
+    QStringList parts = command.split(" ", QString::SkipEmptyParts);
 
-    return response;
-}
-
-StateCommandHandler::State StateCommandHandler::getStateFromCommand(const QString commandStr, const CommandType type) const
-{
-    State state = STATE_INVALID;
-
-    if(isValid(commandStr, type))
+    if(type == LED_COMMAND_RESPONSE_OK && //if the type has been determined by AbstractCommandHandler
+       strToState(parts[LED_STRUCT_POS_ARGUMENT]) == LED_STATE_INVALID) //validating argument
     {
-        QStringList parts = commandStr.split(" ", QString::SkipEmptyParts);
-        if(type == COMMAND_TYPE_REQUEST){
-            state = strToState(parts[REQUEST_STATE]);
-        }
-        else if(type == COMMAND_TYPE_RESPONSE && parts.size() == RESPONSE_MAX_SIZE){
-            state = strToState(parts[RESPONSE_STATE]);
-        }
+       type = LED_COMMAND_INVALID;
     }
-
-    return state;
-}
-
-bool StateCommandHandler::isValid(const QString commandStr, const CommandType type) const
-{  
-    bool result = true;
-    QStringList parts = commandStr.split(" ", QString::SkipEmptyParts);
-
-    if(type == COMMAND_TYPE_REQUEST)
+    else if(parts[LED_STRUCT_POS_COMMAND] == mCommands[LED_COMMAND_STATE_SET])
     {
-        if(parts.size() != REQUEST_SIZE ||
-           parts[REQUEST_COMMAND] != mCommandTexts[COMMAND_TYPE_REQUEST] ||
-           !mStateTexts.contains(parts[REQUEST_STATE]))
+        if(parts.size() == LED_STRUCT_SIZE_WITH_ARGUMENT && //validating size
+                strToState(parts[LED_STRUCT_POS_ARGUMENT]) != LED_STATE_INVALID) //validating argument
         {
-            result = false;
+            type = LED_COMMAND_STATE_SET;
         }
     }
-    else if(type == COMMAND_TYPE_RESPONSE)
+    else if(parts[LED_STRUCT_POS_COMMAND] == mCommands[LED_COMMAND_STATE_GET])
     {
-        if(parts.size() < RESPONSE_MIN_SIZE ||
-           parts.size() > RESPONSE_MAX_SIZE ||
-           !mResponseResultTexts.contains(parts[RESPONSE_RESULT]) ||
-           (parts.size() == RESPONSE_MAX_SIZE && !mStateTexts.contains(parts[RESPONSE_STATE])))
-        {
-            result = false;
+        if(parts.size() == LED_STRUCT_SIZE_NO_ARGUMENT){ //validating size
+            type = LED_COMMAND_STATE_GET;
         }
     }
 
-    return result;
+    return type;
 }
 
-StateCommandHandler::State StateCommandHandler::strToState(const QString stateStr) const
+LedState StateCommandHandler::getState(const QString command) const
 {
-    State state = STATE_INVALID;
+   LedState state = LED_STATE_INVALID;
+   LedCommandType type = getType(command);
 
-    if(stateStr == mStateTexts[STATE_ON]){
-        state = STATE_ON;
-    }
-    else  if(stateStr == mStateTexts[STATE_OFF]){
-     state = STATE_OFF;
+   if(type == LED_COMMAND_STATE_SET || type == LED_COMMAND_RESPONSE_OK)
+   {
+      QStringList parts = command.split(" ", QString::SkipEmptyParts);
+      state = strToState(parts[LED_STRUCT_POS_ARGUMENT]);
+   }
+
+   return state;
+}
+
+LedState StateCommandHandler::strToState(const QString stateStr) const
+{
+    LedState state = LED_STATE_INVALID;
+
+    for(auto stateIter = mStates.begin(); stateIter != mStates.end(); ++stateIter)
+    {
+        if(*stateIter == stateStr)
+        {
+            state = stateIter.key();
+            break;
+        }
     }
 
     return state;
@@ -113,262 +150,240 @@ StateCommandHandler::State StateCommandHandler::strToState(const QString stateSt
 
 ColorCommandHandler::ColorCommandHandler()
 {
-    for(int commandText = 0; commandText < COMMAND_TYPE_INVALID; ++ commandText){
-        mCommandTexts.append("");
+    mColors.insert(LED_COLOR_RED, "red");
+    mColors.insert(LED_COLOR_GREEN, "green");
+    mColors.insert(LED_COLOR_BLUE, "blue");
+
+    mCommands.insert(LED_COMMAND_COLOR_SET, "set-led-color");
+    mCommands.insert(LED_COMMAND_COLOR_GET, "get-led-color");
+}
+
+QString ColorCommandHandler::createSetColorCommand(const LedColor color) const
+{
+    QString command;
+
+    if(mColors.contains(color)){
+        command = QString("%1 %2\n")
+                .arg(mCommands[LED_COMMAND_COLOR_SET])
+                .arg(mColors[color]);
     }
 
-    mCommandTexts[COMMAND_TYPE_REQUEST] = "set-led-color";
-    mCommandTexts[COMMAND_TYPE_RESPONSE] = "get-led-color";
+    return command;
+}
 
-    for(int state = 0; state < COLOR_INVALID; ++ state){
-        mColorTexts.append("");
+QString ColorCommandHandler::createGetColorCommand() const
+{
+    return QString("%1\n").arg(mCommands[LED_COMMAND_COLOR_GET]);
+}
+
+QString ColorCommandHandler::createResponse(LedColor color)
+{
+    QString command;
+
+    if(!mColors.contains(color)){
+        color = LED_COLOR_INVALID;
     }
 
-    mColorTexts[COLOR_RED] = "red";
-    mColorTexts[COLOR_GREEN] = "green";
-    mColorTexts[COLOR_BLUE] = "blue";
+    command = (color == LED_COLOR_INVALID)?
+                QString("%1\n").arg(mResponses[LED_COMMAND_RESPONSE_FAILED]) :
+                QString("%1 %2\n").arg(mResponses[LED_COMMAND_RESPONSE_OK]).arg(mColors[color]);
+
+    return command;
 }
 
-QString ColorCommandHandler::createRequest(const ColorCommandHandler::Color color) const
+LedCommandType ColorCommandHandler::getType(const QString command) const
 {
-    return QString("%1 %2\n")
-            .arg(mCommandTexts[REQUEST_COMMAND])
-            .arg(mColorTexts[color]);
-}
+    LedCommandType type = AbstractCommandHandler::getType(command);
+    if(command.isEmpty()){
+        return type;
+    }
 
-QString ColorCommandHandler::createResponse(const ResponseResult result, const Color color) const
-{
-    QString response = result == RESPONSE_OK?
-                       QString("%1 %2\n").arg(mResponseResultTexts[result]).arg(mColorTexts[color]) :
-                       QString("%1\n").arg(mResponseResultTexts[result]);
+    QStringList parts = command.split(" ", QString::SkipEmptyParts);
 
-    return response;
-}
-
-ColorCommandHandler::Color ColorCommandHandler::getColorFromCommand(const QString commandStr, const CommandType type) const
-{
-    Color color = COLOR_INVALID;
-
-    if(isValid(commandStr, type))
+    if(type == LED_COMMAND_RESPONSE_OK && //if the type has been determined by AbstractCommandHandler
+       strToColor(parts[LED_STRUCT_POS_ARGUMENT]) == LED_COLOR_INVALID) //validating argument
     {
-        QStringList parts = commandStr.split(" ", QString::SkipEmptyParts);
-        if(type == COMMAND_TYPE_REQUEST){
-            color = strToColor(parts[REQUEST_COLOR]);
+       type = LED_COMMAND_INVALID;
+    }
+    else if(parts[LED_STRUCT_POS_COMMAND] == mCommands[LED_COMMAND_COLOR_SET])
+    {
+        if(parts.size() == LED_STRUCT_SIZE_WITH_ARGUMENT && //validating size
+                strToColor(parts[LED_STRUCT_POS_ARGUMENT]) != LED_COLOR_INVALID) //validating argument
+        {
+            type = LED_COMMAND_COLOR_SET;
         }
-        else if(type == COMMAND_TYPE_RESPONSE && parts.size() == RESPONSE_MAX_SIZE){
-            color = strToColor(parts[RESPONSE_COLOR]);
+    }
+    else if(parts[LED_STRUCT_POS_COMMAND] == mCommands[LED_COMMAND_COLOR_GET])
+    {
+        if(parts.size() == LED_STRUCT_SIZE_NO_ARGUMENT){ //validating size
+            type = LED_COMMAND_COLOR_GET;
         }
+    }
+
+    return type;
+}
+
+LedColor ColorCommandHandler::getColor(const QString command) const
+{
+    LedColor color = LED_COLOR_INVALID;
+    LedCommandType type = getType(command);
+
+    if(type == LED_COMMAND_COLOR_SET || type == LED_COMMAND_RESPONSE_OK)
+    {
+       QStringList parts = command.split(" ", QString::SkipEmptyParts);
+       color = strToColor(parts[LED_STRUCT_POS_ARGUMENT]);
     }
 
     return color;
 }
 
-bool ColorCommandHandler::isValid(const QString commandStr, const CommandType type) const
+LedColor ColorCommandHandler::strToColor(const QString colorStr) const
 {
-    bool result = true;
-    QStringList parts = commandStr.split(" ", QString::SkipEmptyParts);
+    LedColor color = LED_COLOR_INVALID;
 
-    if(type == COMMAND_TYPE_REQUEST)
+    for(auto colorIter = mColors.begin(); colorIter != mColors.end(); ++colorIter)
     {
-        if(parts.size() != REQUEST_SIZE ||
-           parts[REQUEST_COMMAND] != mCommandTexts[COMMAND_TYPE_REQUEST] ||
-           !mColorTexts.contains(parts[REQUEST_COLOR]))
+        if(*colorIter == colorStr)
         {
-            result = false;
+            color = colorIter.key();
+            break;
         }
-    }
-    else if(type == COMMAND_TYPE_RESPONSE)
-    {
-        if(parts.size() < RESPONSE_MIN_SIZE ||
-           parts.size() > RESPONSE_MAX_SIZE ||
-           !mResponseResultTexts.contains(parts[RESPONSE_RESULT]) ||
-           (parts.size() == RESPONSE_MAX_SIZE && !mColorTexts.contains(parts[RESPONSE_COLOR])))
-        {
-            result = false;
-        }
-    }
-
-    return result;
-}
-
-ColorCommandHandler::Color ColorCommandHandler::strToColor(const QString colorStr) const
-{
-    Color color = COLOR_INVALID;
-
-    if(colorStr == mColorTexts[COLOR_RED]){
-        color = COLOR_RED;
-    }
-    else if(colorStr == mColorTexts[COLOR_GREEN]){
-        color = COLOR_GREEN;
-    }
-    else if(colorStr == mColorTexts[COLOR_BLUE]){
-        color = COLOR_BLUE;
     }
 
     return color;
 }
 
 //////////////////////////////////////
-///        RateCommandHandler      ///
+///      RateCommandHandler        ///
 //////////////////////////////////////
 
 RateCommandHandler::RateCommandHandler()
 {
-    for(int commandText = 0; commandText < COMMAND_TYPE_INVALID; ++ commandText){
-        mCommandTexts.append("");
+    mCommands.insert(LED_COMMAND_RATE_SET, "set-led-rate");
+    mCommands.insert(LED_COMMAND_RATE_GET, "get-led-rate");
+}
+
+QString RateCommandHandler::createSetRateCommand(const LedRate rate) const
+{
+    QString command;
+
+    if(rate >= 0 && rate <= LED_RATE_MAX){
+        command = QString("%1 %2\n")
+                .arg(mCommands[LED_COMMAND_RATE_SET])
+                .arg(rate);
     }
 
-    mCommandTexts[COMMAND_TYPE_REQUEST] = "set-led-rate";
-    mCommandTexts[COMMAND_TYPE_RESPONSE] = "get-led-rate";
+    return command;
 }
 
-QString RateCommandHandler::createRequest(const quint8 rate) const
+QString RateCommandHandler::createGetRateCommand() const
 {
-    return QString("%1 %2\n")
-            .arg(mCommandTexts[REQUEST_COMMAND])
-            .arg(rate);
+    return QString("%1\n").arg(mCommands[LED_COMMAND_RATE_GET]);
 }
 
-QString RateCommandHandler::createResponse(const ResponseResult result, const quint8 rate) const
+QString RateCommandHandler::createResponse(LedRate rate)
 {
-    QString response = result == RESPONSE_OK?
-                       QString("%1 %2\n").arg(mResponseResultTexts[result]).arg(rate) :
-                       QString("%1\n").arg(mResponseResultTexts[result]);
+    QString command;
 
-    return response;
+     if(rate < 0 && rate > LED_RATE_MAX){
+        rate = LED_RATE_INVALID;
+    }
+
+    command = (rate == LED_RATE_INVALID)?
+                QString("%1\n").arg(mResponses[LED_COMMAND_RESPONSE_FAILED]) :
+                QString("%1 %2\n").arg(mResponses[LED_COMMAND_RESPONSE_OK]).arg(rate);
+
+    return command;
 }
 
-quint8 RateCommandHandler::getRateFromCommand(const QString commandStr, const AbstractCommandHandler::CommandType type, bool& ok) const
+LedCommandType RateCommandHandler::getType(const QString command) const
 {
-   quint8 rate = 0;
+    LedCommandType type = AbstractCommandHandler::getType(command);
+    if(command.isEmpty()){
+        return type;
+    }
 
-    ok = isValid(commandStr, type);
+    QStringList parts = command.split(" ", QString::SkipEmptyParts);
 
-    if(ok)
+    if(type == LED_COMMAND_RESPONSE_OK)
     {
-        QStringList parts = commandStr.split(" ", QString::SkipEmptyParts);
-        if(type == COMMAND_TYPE_REQUEST){
-            rate = parts[REQUEST_RATE].toUShort(&ok);
+        bool ok;
+        LedRate rate = parts[LED_STRUCT_POS_ARGUMENT].toUShort(&ok);
+        if(!ok || rate > LED_RATE_MAX){
+            type = LED_COMMAND_INVALID;
         }
-        else if(type == COMMAND_TYPE_RESPONSE && parts.size() == RESPONSE_MAX_SIZE){
-            rate = parts[RESPONSE_RATE].toUShort(&ok);
+    }
+    else if(parts[LED_STRUCT_POS_COMMAND] == mCommands[LED_COMMAND_RATE_SET])
+    {
+        if(parts.size() == LED_STRUCT_SIZE_WITH_ARGUMENT)
+        {
+            bool ok;
+            LedRate rate = parts[LED_STRUCT_POS_ARGUMENT].toUShort(&ok);
+            if(ok || rate <= LED_RATE_MAX){
+                type = LED_COMMAND_RATE_SET;
+            }
         }
+    }
+    else if(parts[LED_STRUCT_POS_COMMAND] == mCommands[LED_COMMAND_RATE_GET])
+    {
+        if(parts.size() == LED_STRUCT_SIZE_NO_ARGUMENT){ //validating size
+            type = LED_COMMAND_RATE_GET;
+        }
+    }
 
-        if(ok && rate > mMaxRate){
-            ok = false;
+    return type;
+}
+
+LedRate RateCommandHandler::getRate(const QString command) const
+{
+    LedRate rate = LED_RATE_INVALID;
+    LedCommandType type = getType(command);
+
+    if(type == LED_COMMAND_RATE_SET || type == LED_COMMAND_RESPONSE_OK)
+    {
+        QStringList parts = command.split(" ", QString::SkipEmptyParts);
+
+        bool ok;
+        rate = parts[LED_STRUCT_POS_ARGUMENT].toUShort(&ok);
+
+        if(!ok || rate > LED_RATE_MAX){
+            rate = LED_RATE_INVALID;
         }
     }
 
     return rate;
 }
 
-bool RateCommandHandler::isValid(const QString commandStr, const AbstractCommandHandler::CommandType type) const
-{
-    bool result = true;
-    QStringList parts = commandStr.split(" ", QString::SkipEmptyParts);
-    bool rateOk;
-
-    if(type == COMMAND_TYPE_REQUEST)
-    {
-        if(parts.size() != REQUEST_SIZE ||
-           parts[REQUEST_COMMAND] != mCommandTexts[COMMAND_TYPE_REQUEST])
-        {
-            result = false;
-        }
-
-        quint8 rate = parts[REQUEST_RATE].toUShort(&rateOk);
-        if(!rateOk || rate > mMaxRate){
-            result = false;
-        }
-    }
-    else if(type == COMMAND_TYPE_RESPONSE)
-    {
-        if(parts.size() < RESPONSE_MIN_SIZE ||
-           parts.size() > RESPONSE_MAX_SIZE ||
-           !mResponseResultTexts.contains(parts[RESPONSE_RESULT]))
-        {
-            result = false;
-        }
-
-        if((parts.size() == RESPONSE_MAX_SIZE && parts[RESPONSE_RESULT] != mResponseResultTexts[RESPONSE_OK]) ||
-           (parts.size() == RESPONSE_MIN_SIZE && parts[RESPONSE_RESULT] != mResponseResultTexts[RESPONSE_FAILED]))
-        {
-            result = false;
-        }
-
-        if(parts.size() == RESPONSE_MAX_SIZE)
-        {
-            quint8 rate = parts[RESPONSE_RATE].toUShort(&rateOk);
-            if(!rateOk || rate > mMaxRate){
-                result = false;
-            }
-        }
-    }
-
-    return result;
-}
-
 //////////////////////////////////////
-///          CommandPool           ///
+///          COMMAND_HANDLERS      ///
 //////////////////////////////////////
 
-QHash<CommandPool::LedCommandType, CommandPool::AbstractCommandHandlerPtr> CommandPool::mCommandStorage;
+StateCommandHandler LED_COMMAND_HANDLERS::stateCommandHandler;
+ColorCommandHandler LED_COMMAND_HANDLERS::colorCommandHandler;
+RateCommandHandler LED_COMMAND_HANDLERS::rateCommandHandler;
 
-AbstractCommandHandler *CommandPool::getCommandHandler(LedCommandType type)
+LedCommandType LED_COMMAND_HANDLERS::getCommandType(QString command)
 {
-    if(type >= LED_COMMAND_INVALID){
-        return nullptr;
+    LedCommandType type = LED_COMMAND_INVALID;
+
+    type = stateCommandHandler.getType(command);
+
+    if(type == LED_COMMAND_INVALID){
+        type = colorCommandHandler.getType(command);
     }
 
-    if(!mCommandStorage.contains(type))
-    {
-       switch(type)
-       {
-       case LED_COMMAND_STATE:
-           mCommandStorage.insert(type, AbstractCommandHandlerPtr( new StateCommandHandler));
-           break;
-       case LED_COMMAND_COLOR:
-           mCommandStorage.insert(type, AbstractCommandHandlerPtr( new ColorCommandHandler));
-           break;
-       case LED_COMMAND_RATE:
-           mCommandStorage.insert(type, AbstractCommandHandlerPtr( new RateCommandHandler));
-           break;
-       default:
-           break;
-       }
+    if(type == LED_COMMAND_INVALID){
+        type = rateCommandHandler.getType(command);
     }
 
-    auto handlerPtr = mCommandStorage.find(type);
-    return (*handlerPtr).get();
-}
-
-CommandPool::CommandInfo CommandPool::getCommandInfo(QString commandStr)
-{
-    CommandInfo result (LED_COMMAND_INVALID, AbstractCommandHandler::COMMAND_TYPE_INVALID);
-
-    for(int type = 0; type < LED_COMMAND_INVALID; ++ type)
-    {
-        AbstractCommandHandler* handler = getCommandHandler(LedCommandType(type));
-        if(handler != nullptr)
-        {
-            if(handler->isValid(commandStr, AbstractCommandHandler::COMMAND_TYPE_REQUEST))
-            {
-                result = CommandInfo(LedCommandType(type), AbstractCommandHandler::COMMAND_TYPE_REQUEST);
-                break;
-            }
-            else if(handler->isValid(commandStr, AbstractCommandHandler::COMMAND_TYPE_RESPONSE))
-            {
-                result = CommandInfo(LedCommandType(type), AbstractCommandHandler::COMMAND_TYPE_RESPONSE);
-                break;
-            }
-        }
-    }
-
-    return result;
+    return type;
 }
 
 
-void Led::test()
-{
 
-}
+
+
+
+
+
+
