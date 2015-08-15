@@ -10,6 +10,8 @@
 
 #include "ledlib.h"
 
+using namespace LEDGLOBAL;
+
 typedef QPair<QHostAddress, quint16> ClientId;
 
 //////////////////////////////////////
@@ -28,14 +30,31 @@ public:
     Network( QObject* parent = 0);
     bool startServer(int port);
 
+    void onNewCommands(const QString commands, ClientId id);
+    void sendCommand(QString command, ClientId id);
+
 public slots:
     virtual void onNewConnection();
     void onDisconnect();
     void onReadClient();
-    void onSendCommand(QString command, ClientId id);
+
+    void onSetLedStateResponse(bool ok, const LedState state, ClientId id);
+    void onSetLedColorResponse(bool ok, const LedColor color, ClientId id);
+    void onSetLedRateResponse(bool ok, const LedRate rate, ClientId id);
+
+    void onGetLedStateResponse(const LedState state, ClientId id);
+    void onGetLedColorResponse(const LedColor color, ClientId id);
+    void onGetLedRateResponse(const LedRate rate, ClientId id);
 
 signals:
-    void newCommand(QString commandText, ClientId id);
+    void setLedState(const LedState state, ClientId id);
+    void setLedRate(const LedRate rate, ClientId id);
+    void setLedColor(const LedColor color, ClientId id);
+
+    void getLedState(ClientId id);
+    void getLedColor(ClientId id);
+    void getLedRate(ClientId id);
+
     void message(QString text);
 };
 
@@ -52,18 +71,31 @@ class LedServer : public QMainWindow
 
     Led mLed;
 
-    void setState(StateCommandHandler::State state);
+    void setState(LedState state);
 
 public:
     explicit LedServer(QWidget *parent = 0);
     ~LedServer();
 
-public slots:
+public slots:        
+    void onSetLedState(const LedState state, ClientId id);
+    void onSetLedColor(const LedColor color, ClientId id);
+    void onSetLedRate(const LedRate rate, ClientId id);
+
+    void onGetLedState(ClientId id);
+    void onGetLedColor(ClientId id);
+    void onGetLedRate(ClientId id);
+
     void onMessage(QString message);
-    void onCommand(QString command, ClientId id);
 
 signals:
-    void sendCommand(QString command, ClientId id);
+    void setLedStateResponse(bool ok, const LedState state, ClientId id);
+    void setLedColorResponse(bool ok, const LedColor color, ClientId id);
+    void setLedRateResponse(bool ok, const LedRate rate, ClientId id);
+
+    void getLedStateResponse(const LedState state, ClientId id);
+    void getLedColorResponse(const LedColor color, ClientId id);
+    void getLedRateResponse(const LedRate rate, ClientId id);
 };
 
 #endif // LEDSERVER_H
