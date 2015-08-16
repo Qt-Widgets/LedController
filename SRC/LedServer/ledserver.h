@@ -2,60 +2,47 @@
 #define LEDSERVER_H
 
 #include <QMainWindow>
-#include <QTcpServer>
-#include <QTcpSocket>
-#include <QHash>
 #include <QByteArray>
 #include <QTextEdit>
+#include <QIntValidator>
+#include <QMenu>
+#include <QDialog>
+#include <QLabel>
+#include <QLineEdit>
+#include <QPushButton>
+#include <QHBoxLayout>
+#include <QVBoxLayout>
+#include <QGroupBox>
 
 #include "ledlib.h"
+#include "net.h"
 
 using namespace LEDGLOBAL;
 
-typedef QPair<QHostAddress, quint16> ClientId;
+Q_DECLARE_METATYPE(LedState);
+Q_DECLARE_METATYPE(LedColor);
+Q_DECLARE_METATYPE(LedRate);
+Q_DECLARE_METATYPE(ClientId);
 
 //////////////////////////////////////
-///             Network            ///
+///     ServerSettingsDialog       ///
 //////////////////////////////////////
 
-class Network : public QObject
+class ServerSettingsDialog : public QDialog
 {
     Q_OBJECT
 
-    QTcpServer* mServer;
-    quint16 mNextBlockSize;
-    QHash<ClientId, QTcpSocket*> mConnectedClients;
+    QLineEdit* mPort;
+    QPushButton* mStartButton;
 
 public:
-    Network( QObject* parent = 0);
-    bool startServer(int port);
+    ServerSettingsDialog(QDialog* parent = 0);
 
-    void onNewCommands(const QString commands, ClientId id);
-    void sendCommand(QString command, ClientId id);
-
-public slots:
-    virtual void onNewConnection();
-    void onDisconnect();
-    void onReadClient();
-
-    void onSetLedStateResponse(bool ok, const LedState state, ClientId id);
-    void onSetLedColorResponse(bool ok, const LedColor color, ClientId id);
-    void onSetLedRateResponse(bool ok, const LedRate rate, ClientId id);
-
-    void onGetLedStateResponse(const LedState state, ClientId id);
-    void onGetLedColorResponse(const LedColor color, ClientId id);
-    void onGetLedRateResponse(const LedRate rate, ClientId id);
+private slots:
+    void onStartButtonPressed();
 
 signals:
-    void setLedState(const LedState state, ClientId id);
-    void setLedRate(const LedRate rate, ClientId id);
-    void setLedColor(const LedColor color, ClientId id);
-
-    void getLedState(ClientId id);
-    void getLedColor(ClientId id);
-    void getLedRate(ClientId id);
-
-    void message(QString text);
+     void startServer(const quint16 port);
 };
 
 //////////////////////////////////////
@@ -67,17 +54,17 @@ class LedServer : public QMainWindow
     Q_OBJECT
 
     QTextEdit mTextEdit;
-    Network mNet;
-
+    Server mServer;
     Led mLed;
 
-    void setState(LedState state);
+    QMutex mMutex;
+
+    ServerSettingsDialog mServerSettingsWidget;
 
 public:
     explicit LedServer(QWidget *parent = 0);
-    ~LedServer();
 
-public slots:        
+public slots:
     void onSetLedState(const LedState state, ClientId id);
     void onSetLedColor(const LedColor color, ClientId id);
     void onSetLedRate(const LedRate rate, ClientId id);

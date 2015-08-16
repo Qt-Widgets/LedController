@@ -5,4 +5,8 @@ add_project (LedServer
              main.cpp
              ledserver.cpp
              ledserver.h
-             ledserver.ui)
+             ledserver.ui
+             ThreadPool.h
+             ThreadPool.cpp
+			 net.h
+             net.cpp)
