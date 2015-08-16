@@ -5,4 +5,8 @@ add_project (LedClient
              main.cpp
              ledclient.cpp
              ledclient.h
+			 net.cpp
+             net.h
+			 widgets.cpp
+             widgets.h
              ledclient.ui)
