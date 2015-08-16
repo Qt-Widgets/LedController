@@ -3,7 +3,7 @@ cmake_policy (SET CMP0015 NEW)
 function (add_project NAME TYPE ALLSOURCES)		
 
     set (ALLSOURCES ${ALLSOURCES} ${ARGN})    
-	add_definitions("-std=c++11")
+        add_definitions("-std=c++14")
 
     foreach (CUR_SRC_FILE ${ALLSOURCES})
         if (CUR_SRC_FILE MATCHES "\\.h$")
