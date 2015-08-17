@@ -3,7 +3,7 @@ cmake_policy (SET CMP0015 NEW)
 function (add_project NAME TYPE ALLSOURCES)		
 
     set (ALLSOURCES ${ALLSOURCES} ${ARGN})    
-        add_definitions("-std=c++14")
+        add_definitions("-std=c++11")
 
     foreach (CUR_SRC_FILE ${ALLSOURCES})
         if (CUR_SRC_FILE MATCHES "\\.h$")
@@ -18,6 +18,7 @@ function (add_project NAME TYPE ALLSOURCES)
     link_directories ( ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}/${CMAKE_BUILD_TYPE} )
 
     if( TYPE STREQUAL "SHARED_LIB")
+        message ( STATUS "SHARED_LIB" )
         add_library(${NAME}
                     SHARED
                     ${ALLSOURCES})
