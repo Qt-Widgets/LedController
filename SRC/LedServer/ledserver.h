@@ -49,6 +49,12 @@ signals:
 ///           LedServer            ///
 //////////////////////////////////////
 
+/**
+*  Basic server class
+*  Handles messages from net class and responds to them
+*/
+
+
 class LedServer : public QMainWindow
 {
     Q_OBJECT

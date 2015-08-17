@@ -36,7 +36,7 @@ ServerSettingsDialog::ServerSettingsDialog(QDialog *parent) : QDialog(parent)
 
     connect(mStartButton, SIGNAL(pressed()), this, SLOT(onStartButtonPressed()));
 
-    setFixedSize(200, 100);
+    //setFixedSize(200, 100);
 }
 
 void ServerSettingsDialog::onStartButtonPressed()

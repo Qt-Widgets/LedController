@@ -18,6 +18,11 @@ typedef qintptr ClientId;
 ///           Client               ///
 //////////////////////////////////////
 
+/**
+*  Handle connection for a client
+*  Receives messages and sends responses for a specific client
+*/
+
 class Client : public QObject
 {
     Q_OBJECT
@@ -68,6 +73,12 @@ signals:
 ///             Server             ///
 //////////////////////////////////////
 
+/**
+*  Multithreaded server
+*  Handles incoming connections and creates their handler in separate threads
+*  Serves as a proxy between ledserver and clients
+*/
+
 class Server : public QTcpServer
 {
     Q_OBJECT
@@ -85,7 +96,7 @@ public slots:
     void onDisconnect(ClientId clientId);
 
 protected:
-    void incomingConnection(qintptr socketDescriptor);
+    void incomingConnection(qintptr socketDescriptor);  /**< Creates a client class object  and puts it into separate thread*/
 
 signals:
     void message(QString text);
