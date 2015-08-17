@@ -4,15 +4,16 @@
 ///          LedWidget             ///
 //////////////////////////////////////
 
+
 LedWidget::LedWidget(QLabel *parent) : mBlinkState(false)
 {
-   mTimer = new QTimer(this);
-   setFixedSize(20,20);
+    mTimer = new QTimer(this);
+    setFixedSize(20,20);
 
-   connect(mTimer, SIGNAL(timeout()), this, SLOT(blink()));
+    connect(mTimer, SIGNAL(timeout()), this, SLOT(blink()));
 
-   setColor(mLed.getLedColor());
-   setRate(mLed.getLedRate());
+    setColor(mLed.getLedColor());
+    setRate(mLed.getLedRate());
 }
 
 bool LedWidget::setLedColor(const LedColor color)
@@ -28,7 +29,7 @@ bool LedWidget::setLedColor(const LedColor color)
 
 bool LedWidget::setLedState(const LedState state)
 {
-     bool result = mLed.setLedState(state);
+    bool result = mLed.setLedState(state);
 
     if(result)
     {
@@ -99,7 +100,7 @@ void LedWidget::setColor(const LedColor color)
 void LedWidget::setState(const LedState state)
 {
     if(state == LED_STATE_ON){
-       setColor(mLed.getLedColor());
+        setColor(mLed.getLedColor());
     }
     else if(state == LED_STATE_OFF){
         setColor(LED_COLOR_INVALID);
@@ -110,7 +111,7 @@ void LedWidget::setRate(const LedRate rate)
 {
     if(rate > 0)
     {
-        quint16 timeout = 1000/rate;
+        quint16 timeout = 500/rate;
         mTimer->start(timeout);
     }
 }
@@ -126,7 +127,7 @@ void LedWidget::blink()
     }
 
     if(mBlinkState){
-       setStyleSheet("background-color: grey; border: 2px solid green; border-radius: 4px;");
+        setStyleSheet("background-color: grey; border: 2px solid green; border-radius: 4px;");
     }
     else{
         setColor(mLed.getLedColor());
@@ -179,8 +180,6 @@ ConnectionDialog::ConnectionDialog(QDialog *parent) : QDialog(parent)
     mainLay->setAlignment(mConnectButton, Qt::AlignCenter);
 
     connect(mConnectButton, SIGNAL(pressed()), this, SLOT(onConnectionButtonPressed()));
-
-    setFixedSize(300, 100);
 }
 
 void ConnectionDialog::onConnectionButtonPressed()
@@ -210,7 +209,10 @@ LedSettingsWidget::LedSettingsWidget(QWidget *parent)
     }
 
     mRateEditor = new QLineEdit(this);
-    mRateEditor->setText("0");
+
+    mStateEditor->setFixedWidth(80);
+    mColorEditor->setFixedWidth(80);
+    mRateEditor->setFixedWidth(80);
 
     mStateSetButton = new QPushButton ("Set state", this);
     mStateGetButton = new QPushButton ("Get state", this);
@@ -219,29 +221,41 @@ LedSettingsWidget::LedSettingsWidget(QWidget *parent)
     mRateSetButton = new QPushButton ("Set rate", this);
     mRateGetButton = new QPushButton ("Get rate", this);
 
-   QGridLayout *layout = new QGridLayout();
-   layout->addWidget(mStateEditor,0,2);
-   layout->addWidget(mStateSetButton,0,3);
-   layout->addWidget(mStateGetButton,0,4);
-   layout->addWidget(mColorEditor,1,2);
-   layout->addWidget(mColorSetButton,1,3);
-   layout->addWidget(mColorGetButton,1,4);
-   layout->addWidget(mRateEditor,2,2);
-   layout->addWidget(mRateSetButton,2,3);
-   layout->addWidget(mRateGetButton,2,4);
+    QHBoxLayout* stateLay = new QHBoxLayout;
+    stateLay->addWidget(mStateEditor);
+    stateLay->addWidget(mStateSetButton);
+    stateLay->addWidget(mStateGetButton);
 
-   QGroupBox* box = new QGroupBox("Led Parameters", this);
-   box->setLayout(layout);
+    QHBoxLayout* colorLay = new QHBoxLayout;
+    colorLay->addWidget(mColorEditor);
+    colorLay->addWidget(mColorSetButton);
+    colorLay->addWidget(mColorGetButton);
 
-   setFixedSize(310,110);
+    QHBoxLayout* rateLay = new QHBoxLayout;
+    rateLay->addWidget(mRateEditor);
+    rateLay->addWidget(mRateSetButton);
+    rateLay->addWidget(mRateGetButton);
 
-   connect (mStateSetButton, SIGNAL (clicked()), SLOT(setStateSlot()));
-   connect (mColorSetButton, SIGNAL (clicked()), SLOT(setColorSlot()));
-   connect (mRateSetButton, SIGNAL (clicked()), SLOT(setRateSlot()));
 
-   connect (mStateGetButton, SIGNAL (clicked()), SIGNAL(getLedState()));
-   connect (mColorGetButton, SIGNAL (clicked()), SIGNAL(getLedColor()));
-   connect (mRateGetButton, SIGNAL (clicked()), SIGNAL(getLedRate()));
+    QVBoxLayout* verticalLay = new QVBoxLayout;
+    verticalLay->addLayout(stateLay);
+    verticalLay->addLayout(colorLay);
+    verticalLay->addLayout(rateLay);
+
+    QGroupBox* box = new QGroupBox("Led Parameters", this);
+    box->setLayout(verticalLay);
+
+    QVBoxLayout* mainLay = new QVBoxLayout;
+    mainLay->addWidget(box);
+    setLayout(mainLay);
+
+    connect (mStateSetButton, SIGNAL (clicked()), SLOT(setStateSlot()));
+    connect (mColorSetButton, SIGNAL (clicked()), SLOT(setColorSlot()));
+    connect (mRateSetButton, SIGNAL (clicked()), SLOT(setRateSlot()));
+
+    connect (mStateGetButton, SIGNAL (clicked()), SIGNAL(getLedState()));
+    connect (mColorGetButton, SIGNAL (clicked()), SIGNAL(getLedColor()));
+    connect (mRateGetButton, SIGNAL (clicked()), SIGNAL(getLedRate()));
 }
 
 void LedSettingsWidget::setStateSlot()
@@ -251,12 +265,12 @@ void LedSettingsWidget::setStateSlot()
 
 void LedSettingsWidget::setColorSlot()
 {
-   emit setLedColor((LedColor)mColorEditor->currentIndex());
+    emit setLedColor((LedColor)mColorEditor->currentIndex());
 }
 
 void LedSettingsWidget::setRateSlot()
 {
-   emit setLedRate((LedRate)mRateEditor->text().toUShort());
+    emit setLedRate((LedRate)mRateEditor->text().remove("Hz").toUShort());
 }
 
 LedState LedSettingsWidget::getState() const
@@ -286,7 +300,7 @@ void LedSettingsWidget::setColor(const LedColor color)
 
 void LedSettingsWidget::setRate(const LedRate rate)
 {
-    mRateEditor->setText(QString::number(rate));
+    mRateEditor->setText(QString::number(rate) + " Hz");
 }
 
 bool LedSettingsWidget::setAvailable(bool isAvailable)

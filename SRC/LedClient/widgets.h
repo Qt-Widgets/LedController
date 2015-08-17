@@ -21,9 +21,18 @@
 
 using namespace LEDGLOBAL;
 
+/**
+*  Basic widgets used in the project
+*/
+
 //////////////////////////////////////
 ///          LedWidget             ///
 //////////////////////////////////////
+
+/**
+*  Graphical led widget
+*  Visualization of Led class
+*/
 
 class LedWidget : public QLabel
 {
@@ -39,7 +48,7 @@ class LedWidget : public QLabel
     void setRate(const LedRate rate);
 
 private slots:
-    void blink();
+    void blink();   /**< called on timer timeout, changes led state */
 
 public:
     LedWidget(QLabel* parent = 0);
@@ -52,7 +61,7 @@ public:
     LedState getLedState() const;
     LedRate getLedRate() const;
 
-    void reset();
+    void reset();   /**<  resets led to defaults */
 };
 
 //////////////////////////////////////
@@ -82,6 +91,12 @@ signals:
 ///      LedSettingsWidget         ///
 //////////////////////////////////////
 
+/**
+*  Provides means to control led parametes
+*  Allows to set and get parameters
+*/
+
+
 class LedSettingsWidget : public QWidget
 {
     Q_OBJECT
@@ -108,7 +123,7 @@ public:
     void setColor(const LedColor color);
     void setRate(const LedRate rate);
 
-    bool setAvailable(bool isAvailable);
+    bool setAvailable(bool isAvailable); /**< disables and enables the widget depending on connection status*/
 
 private slots:
     void setStateSlot();

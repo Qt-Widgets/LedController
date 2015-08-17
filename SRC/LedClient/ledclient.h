@@ -22,15 +22,20 @@ Q_DECLARE_METATYPE(LedRate);
 ///             LedClient          ///
 //////////////////////////////////////
 
+/**
+*  Basic client class
+*  Handles messages from net class and sends them to widgets and vise versa
+*/
+
 class LedClient : public QMainWindow
 {
     Q_OBJECT
 
-    QTextEdit textEdit;
+    QTextEdit mLogWidget;
     std::unique_ptr<Network> mNet;
     QThread* mNetThread;
 
-    LedWidget mLed;
+    LedWidget mLed;                         /**< graphical led indicator */
     LedSettingsWidget mSettingsWidget;
     ConnectionDialog mConnectionWidget;
 
@@ -39,11 +44,11 @@ public:
     ~LedClient();
 
 public slots:  
-    void onConnectionStatus(bool isConnected, QString errorText = QString());
+    void onConnectionStatus(bool isConnected, QString errorText = QString()); /**< connection status update */
 
-    void onLedStateResponse(const LedState state);
-    void onLedColorResponse(const LedColor color);
-    void onLedRateResponse(const LedRate rate);
+    void onLedStateResponse(const LedState state);  /**< state response from server */
+    void onLedColorResponse(const LedColor color);  /**< color response from server */
+    void onLedRateResponse(const LedRate rate);     /**< rate  response from server */
 
     void onMessage(QString message);
 };

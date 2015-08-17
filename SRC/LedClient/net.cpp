@@ -7,7 +7,6 @@
 Network::Network(QObject *parent) :
     mNextBlockSize (0),
     mSocket(nullptr),
-    mWaitingCommand (LED_COMMAND_INVALID),
     QObject(parent)
 {
     qRegisterMetaType<QAbstractSocket::SocketError>("QAbstractSocket::SocketError");
@@ -17,8 +16,6 @@ Network::Network(QObject *parent) :
 void Network::onNewCommands(const QString commands)
 {
     QStringList commandsList = LED_COMMAND_HANDLERS::getCommandList(commands);
-
-    //emit message("Server -->  Client :  " + commands);
 
     for (auto command : commandsList)
     {
@@ -118,7 +115,6 @@ void Network::onError(QAbstractSocket::SocketError error)
 
     QString errorText = QString("Error: %1").arg(errorType);
 
-    mWaitingCommand = LED_COMMAND_INVALID;
     emit connectionStatus(false, errorText);
 }
 
@@ -160,8 +156,6 @@ void Network::sendCommand(QString command)
     out<<quint16(arrBlock.size() - sizeof(mNextBlockSize));
 
     mSocket->write(arrBlock);
-
-    //emit message("Client --> Server : " + command);
 }
 
 
