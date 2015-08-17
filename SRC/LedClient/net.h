@@ -16,14 +16,17 @@ using namespace LEDGLOBAL;
 ///             Network            ///
 //////////////////////////////////////
 
+/**
+*  Basic network class
+*  Sends messages to server and reads them from it
+*/
+
 class Network : public QObject
 {
     Q_OBJECT
 
     QTcpSocket* mSocket;
     quint16 mNextBlockSize;
-
-    LedCommandType mWaitingCommand;
 
 private:
     void handleCommand(const QString command);
@@ -32,8 +35,8 @@ public:
     Network(QObject* parent = 0);
     ~Network();
 
-    void onNewCommands(const QString commands);
-    void sendCommand(QString command);
+    void onNewCommands(const QString commands); /**< determines the type of a command and sends it to ledClient */
+    void sendCommand(QString command);          /**< send command to server */
 
 public slots:
     void startClient(const QHostAddress serverAddr, const quint16 port);
@@ -42,6 +45,7 @@ public slots:
     void onError(QAbstractSocket::SocketError error);
     void onReadServer();
 
+    //commands from client
     void onSetLedState(const LedState state);
     void onSetLedColor(const LedColor color);
     void onSetLedRate(const LedRate rate);
@@ -51,8 +55,9 @@ public slots:
     void onGetLedRate();
 
 signals:
-    void connectionStatus(bool isConnected, QString errorText = QString());
+    void connectionStatus(bool isConnected, QString errorText = QString());  /**< connection status update */
 
+    //responses from server
     void ledStateResponse(const LedState state);
     void ledColorResponse(const LedColor state);
     void ledRateResponse(const LedRate state);

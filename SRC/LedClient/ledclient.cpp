@@ -10,25 +10,68 @@ LedClient::LedClient(QWidget *parent) :  QMainWindow(parent)
     qRegisterMetaType<LedColor>("LedColor");
     qRegisterMetaType<LedRate>("LedRate");
 
-    mNet = std::make_unique<Network>();
+    mNet = std::unique_ptr<Network>(new Network);
 
     //connects
-    connect(&mConnectionWidget, SIGNAL(connectToServer(QHostAddress,quint16)), mNet.get(), SLOT(startClient(QHostAddress,quint16)));
+    connect(&mConnectionWidget,
+            SIGNAL(connectToServer(QHostAddress,quint16)),
+            mNet.get(),
+            SLOT(startClient(QHostAddress,quint16)));
 
-    connect(&mSettingsWidget, SIGNAL(setLedState(LedState)), mNet.get(), SLOT(onSetLedState(LedState)));
-    connect(&mSettingsWidget, SIGNAL(setLedColor(LedColor)), mNet.get(), SLOT(onSetLedColor(LedColor)));
-    connect(&mSettingsWidget, SIGNAL(setLedRate(LedRate)),   mNet.get(), SLOT(onSetLedRate(LedRate)));
+    connect(&mSettingsWidget,
+            SIGNAL(setLedState(LedState)),
+            mNet.get(),
+            SLOT(onSetLedState(LedState)));
 
-    connect(&mSettingsWidget, SIGNAL(getLedState()), mNet.get(), SLOT(onGetLedState()));
-    connect(&mSettingsWidget, SIGNAL(getLedColor()), mNet.get(), SLOT(onGetLedColor()));
-    connect(&mSettingsWidget, SIGNAL(getLedRate()),  mNet.get(), SLOT(onGetLedRate()));
+    connect(&mSettingsWidget,
+            SIGNAL(setLedColor(LedColor)),
+            mNet.get(),
+            SLOT(onSetLedColor(LedColor)));
 
-    connect(mNet.get(), SIGNAL(ledStateResponse(LedState)), this, SLOT(onLedStateResponse(LedState)));
-    connect(mNet.get(), SIGNAL(ledColorResponse(LedColor)), this, SLOT(onLedColorResponse(LedColor)));
-    connect(mNet.get(), SIGNAL(ledRateResponse(LedRate)),   this, SLOT(onLedRateResponse(LedRate)));
+    connect(&mSettingsWidget,
+            SIGNAL(setLedRate(LedRate)),
+            mNet.get(),
+            SLOT(onSetLedRate(LedRate)));
 
-    connect(mNet.get(), SIGNAL(connectionStatus(bool, QString)), this, SLOT(onConnectionStatus(bool,QString)));
-    connect(mNet.get(), SIGNAL(message(QString)), this, SLOT(onMessage(QString)));
+    connect(&mSettingsWidget,
+            SIGNAL(getLedState()),
+            mNet.get(),
+            SLOT(onGetLedState()));
+
+    connect(&mSettingsWidget,
+            SIGNAL(getLedColor()),
+            mNet.get(),
+            SLOT(onGetLedColor()));
+
+    connect(&mSettingsWidget,
+            SIGNAL(getLedRate()),
+            mNet.get(),
+            SLOT(onGetLedRate()));
+
+    connect(mNet.get(),
+            SIGNAL(ledStateResponse(LedState)),
+            this,
+            SLOT(onLedStateResponse(LedState)));
+
+    connect(mNet.get(),
+            SIGNAL(ledColorResponse(LedColor)),
+            this,
+            SLOT(onLedColorResponse(LedColor)));
+
+    connect(mNet.get(),
+            SIGNAL(ledRateResponse(LedRate)),
+            this,
+            SLOT(onLedRateResponse(LedRate)));
+
+    connect(mNet.get(),
+            SIGNAL(connectionStatus(bool, QString)),
+            this,
+            SLOT(onConnectionStatus(bool,QString)));
+
+    connect(mNet.get(),
+            SIGNAL(message(QString)),
+            this,
+            SLOT(onMessage(QString)));
 
     mNetThread = new QThread;
     mNet->moveToThread(mNetThread);
@@ -45,15 +88,17 @@ LedClient::LedClient(QWidget *parent) :  QMainWindow(parent)
     //widgets
     setCentralWidget(&mSettingsWidget);
     QDockWidget *dock = new QDockWidget("Log", this);
-    dock->setWidget(&textEdit);
+    dock->setWidget(&mLogWidget);
     addDockWidget(Qt::BottomDockWidgetArea, dock);
 
-    setFixedWidth(mSettingsWidget.width());
+    mSettingsWidget.setState(mLed.getLedState());
+    mSettingsWidget.setColor(mLed.getLedColor());
+    mSettingsWidget.setRate(mLed.getLedRate());
     mSettingsWidget.setAvailable(false);
 
-    statusBar()->addWidget(&mLed);
+    statusBar()->addWidget(&mLed); 
 
-    onMessage("Program started");
+    onMessage("Program started");  
 }
 
 void LedClient::onLedStateResponse(const LedState state)
@@ -84,19 +129,7 @@ void LedClient::onLedRateResponse(const LedRate rate)
 
 void LedClient::onMessage(QString message)
 {
-    textEdit.append(">" + message.remove("\n"));
-}
-
-LedClient::~LedClient()
-{
-    mNetThread->quit();
-    if (!mNetThread->wait(5000)) /**< if the thread has not exited properly */
-    {
-        mNetThread->terminate();
-        mNetThread->wait();
-    }
-
-    delete mNetThread;
+    mLogWidget.append(">" + message.remove("\n"));
 }
 
 void LedClient::onConnectionStatus(bool isConnected, QString errorText)
@@ -110,4 +143,16 @@ void LedClient::onConnectionStatus(bool isConnected, QString errorText)
     }
 
     mSettingsWidget.setAvailable(isConnected);
+}
+
+LedClient::~LedClient()
+{
+    mNetThread->quit();
+    if (!mNetThread->wait(5000)) /**< if the thread has not exited properly */
+    {
+        mNetThread->terminate();
+        mNetThread->wait();
+    }
+
+    delete mNetThread;
 }
