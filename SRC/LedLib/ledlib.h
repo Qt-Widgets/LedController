@@ -54,6 +54,10 @@ namespace LEDGLOBAL
    ///              Led               ///
    //////////////////////////////////////
 
+   /**
+   *  Simple led simulation
+   */
+
    class EXPORT Led
    {
        LedColor mColor;
@@ -75,6 +79,10 @@ namespace LEDGLOBAL
     //////////////////////////////////////
     ///     AbstractCommandHandler     ///
     //////////////////////////////////////
+
+   /**
+   *  A base for other commands
+   */
 
     class EXPORT AbstractCommandHandler
     {
@@ -103,6 +111,10 @@ namespace LEDGLOBAL
     ///        StateCommandHandler     ///
     //////////////////////////////////////
 
+    /**
+    *  Creates and handles state related commands
+    */
+
     class EXPORT StateCommandHandler : public AbstractCommandHandler
     {
        friend class LED_COMMAND_HANDLERS;
@@ -127,6 +139,10 @@ namespace LEDGLOBAL
     //////////////////////////////////////
     ///        ColorCommandHandler     ///
     //////////////////////////////////////
+
+    /**
+    *  Creates and handles color related commands
+    */
 
     class EXPORT ColorCommandHandler : public AbstractCommandHandler
     {
@@ -153,6 +169,10 @@ namespace LEDGLOBAL
     ///         RateCommandHandler     ///
     //////////////////////////////////////
 
+    /**
+    *  Creates and handles rate related commands
+    */
+
     class EXPORT RateCommandHandler : public AbstractCommandHandler
     {
         friend class LED_COMMAND_HANDLERS;
@@ -173,6 +193,10 @@ namespace LEDGLOBAL
     ///      LED_COMMAND_HANDLERS      ///
     //////////////////////////////////////
 
+    /**
+    *  Provides the means to access handlers from other classes
+    */
+
     struct CommandInfo
     {
         LedCommandType type;
@@ -189,12 +213,9 @@ namespace LEDGLOBAL
         static RateCommandHandler rateCommandHandler;
 
         static CommandInfo getCommandInfo(QString command);
-        static QStringList getCommandList(QString commandLine);
+        static QStringList getCommandList(QString commandLine); // splits several commands merged in one string
     };
-
-
 }
 
-
-
 #endif // LEDLIB_H
+
